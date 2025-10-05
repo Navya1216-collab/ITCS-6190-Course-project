@@ -304,10 +304,9 @@ confirming class imbalance for predictive modeling and the need for resampling o
 * Seasonal delays plot generated → `docs/assets/seasonal_delays.png`
 
 ---
-
 ##  Weekly Check-in Summary
 
- Progress Since Last Meeting
+###  Progress Since Last Meeting
 - Completed Spark-based ingestion pipeline (CSV → Parquet conversion).
 - Cleaned, renamed, and casted columns for consistency.
 - Performed detailed EDA on 3 million flight records:
@@ -316,14 +315,19 @@ confirming class imbalance for predictive modeling and the need for resampling o
   - Generated three visualizations for seasonal, airline, and correlation patterns.
 - Documented all findings with insights and interpretation in the README.
 
-Current Challenges / Blockers
+###  Current Challenges / Blockers
 - Dataset size (multi-GB) causes long load times in Codespaces.
 - Need to join external weather data for richer analysis.
 - Some route-level granularity leads to high variance in averages.
 - Storage optimization and caching improvements under review.
 
-Plan for Next Week
+###  Plan for Next Week
 - Integrate external **weather dataset** to explore delay correlation.
+- Apply feature engineering (e.g., route congestion score, seasonal encoding).
+- Begin baseline **predictive modeling** for delay likelihood using Spark MLlib.
+- Add additional visuals (e.g., boxplots or trend lines) for model explainability.
+- Prepare slides for the next progress presentation.
+
 - Apply feature engineering (e.g., route congestion score, seasonal encoding).
 - Begin baseline **predictive modeling** for delay likelihood using Spark MLlib.
 - Add additional visuals (e.g., boxplots or trend lines) for model explainability.
