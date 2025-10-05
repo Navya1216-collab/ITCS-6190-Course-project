@@ -305,4 +305,27 @@ confirming class imbalance for predictive modeling and the need for resampling o
 
 ---
 
-This completes **Week 8 milestone (Data Ingestion & EDA)**.
+##  Weekly Check-in Summary
+
+ Progress Since Last Meeting
+- Completed Spark-based ingestion pipeline (CSV → Parquet conversion).
+- Cleaned, renamed, and casted columns for consistency.
+- Performed detailed EDA on 3 million flight records:
+  - Delay trends by airline, month, and route.
+  - Correlation analysis between departure and arrival delays.
+  - Generated three visualizations for seasonal, airline, and correlation patterns.
+- Documented all findings with insights and interpretation in the README.
+
+Current Challenges / Blockers
+- Dataset size (multi-GB) causes long load times in Codespaces.
+- Need to join external weather data for richer analysis.
+- Some route-level granularity leads to high variance in averages.
+- Storage optimization and caching improvements under review.
+
+Plan for Next Week
+- Integrate external **weather dataset** to explore delay correlation.
+- Apply feature engineering (e.g., route congestion score, seasonal encoding).
+- Begin baseline **predictive modeling** for delay likelihood using Spark MLlib.
+- Add additional visuals (e.g., boxplots or trend lines) for model explainability.
+- Prepare slides for the next progress presentation.
+
