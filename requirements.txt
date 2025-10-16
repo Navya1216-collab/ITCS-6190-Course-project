@@ -1,4 +1,5 @@
 pyspark
+python-dotenv
 pandas
 matplotlib
-python-dotenv
+kaggle         # only if you’ll download from Kaggle via CLI
