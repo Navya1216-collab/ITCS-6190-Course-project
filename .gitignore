@@ -11,3 +11,8 @@ curated/
 
 # Mac / editor junk
 .DS_Store
+
+# data & outputs
+data/
+outputs/
+
