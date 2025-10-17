@@ -1,53 +1,17 @@
-# Python / venv
-.venv/
-__pycache__/
-*.pyc
+# prevent history expansion for this shell
+set +H
 
-# Local env & data paths
-.env
-curated/
-*.parquet
-*.crc
+# append rules that allow files inside outputs/models/** to be tracked
+{
+  echo ""
+  echo "# keep data & other outputs ignored"
+  echo "data/"
+  echo "outputs/"
+  echo ".kaggle/"
+  echo "# but allow all model artifacts to be tracked"
+  echo "!outputs/models/"
+  echo "!outputs/models/**"
+} >> .gitignore
 
-# Mac / editor junk
-.DS_Store
-
-# data & outputs
-data/
-outputs/
-
-
-data/
-outputs/
-.kaggle/
-
-# allow a couple of small artifacts back in
-!outputs/models/
-!outputs/models/metrics.txt
-!outputs/models/predictions_sample.csv
-# (optional) if you have tiny plots you want to show:
-#!outputs/plots/
-#!outputs/plots/*.png
-
-
-# keep data & other outputs ignored
-data/
-outputs/
-.kaggle/
-# but allow models to be tracked
-!outputs/models/
-
-# keep data & other outputs ignored
-data/
-outputs/
-.kaggle/
-# but allow models to be tracked
-\!outputs/models/
-
-# keep data & other outputs ignored
-data/
-outputs/
-.kaggle/
-# but allow models to be tracked
-!outputs/models/
-
+# confirm
+tail -n 12 .gitignore
