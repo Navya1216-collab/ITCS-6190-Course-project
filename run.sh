@@ -42,3 +42,6 @@ log "Done ✅
 - Tables: $TABLE_DIR
 - Plots:  $PLOTS_DIR
 - Curated parquet: $CURATED_DIR"
+
+log "Running 03_predictive_model.py (prediction)…"
+python src/03_predictive_model.py
