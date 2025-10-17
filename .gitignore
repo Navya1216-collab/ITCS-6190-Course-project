@@ -1,17 +1,10 @@
-# prevent history expansion for this shell
-set +H
+cat > .gitignore << 'EOF'
+# Ignore raw data and cache
+data/
+.kaggle/
+__pycache__/
 
-# append rules that allow files inside outputs/models/** to be tracked
-{
-  echo ""
-  echo "# keep data & other outputs ignored"
-  echo "data/"
-  echo "outputs/"
-  echo ".kaggle/"
-  echo "# but allow all model artifacts to be tracked"
-  echo "!outputs/models/"
-  echo "!outputs/models/**"
-} >> .gitignore
-
-# confirm
-tail -n 12 .gitignore
+# Keep all outputs visible
+!outputs/
+!outputs/**
+EOF
