@@ -1,5 +1,3 @@
-TASK=classify, ALGO=lr, THRESH=15.0, ROC-AUC=0.9334
-TASK=classify, ALGO=rf, THRESH=15.0, ROC-AUC=0.9108
-TASK=regress, ALGO=rfreg, RMSE=22.5098, R2=0.8139
-TASK=classify, ALGO=lr, THRESH=15.0, ROC-AUC=0.9334
-TASK=classify, ALGO=lr, THRESH=15.0, ROC-AUC=0.9334
+version https://git-lfs.github.com/spec/v1
+oid sha256:9c95a963c239752c86302d58546c6ba2970e322c52174666f9077a00f83a2d96
+size 258
