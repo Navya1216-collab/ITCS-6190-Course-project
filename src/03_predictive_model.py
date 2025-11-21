@@ -3,6 +3,7 @@ import os, glob, argparse, logging, shutil, json
 from pathlib import Path
 
 from pyspark.sql import SparkSession, functions as F
+from pyspark.ml import Pipeline
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
 from pyspark.ml.classification import RandomForestClassifier, LogisticRegression
 from pyspark.ml.regression import RandomForestRegressor, LinearRegression
@@ -153,89 +154,132 @@ def main():
     cols = set(df.columns)
 
     # 2) Derived columns
-    if "flight_date" in cols and "year" not in cols:
+    if "flight_date" in cols:
+        df = df.withColumn("flight_date", F.to_date("flight_date"))
+    if "flight_date" in df.columns and "year" not in cols:
         df = df.withColumn("year", F.year("flight_date"))
-    if "flight_date" in cols and "month" not in cols:
+    if "flight_date" in df.columns and "month" not in cols:
         df = df.withColumn("month", F.month("flight_date"))
-    if "flight_date" in cols and "day_of_week" not in cols:
+    if "flight_date" in df.columns and "day_of_week" not in cols:
         df = df.withColumn("day_of_week", F.date_format("flight_date", "E"))
 
     # 3) Label
     if args.task == "classify":
-        if "arr_delay" not in cols:
+        if "arr_delay" not in df.columns:
             raise ValueError("arr_delay needed to create classification label.")
         df = df.withColumn("delayed", F.when(F.col("arr_delay") > args.label_threshold, 1).otherwise(0))
         label_col = "delayed"
     else:
         label_col = "arr_delay"
 
-    # 4) Features
+    # 4) Features + Pipeline
     cat_cols = [c for c in ["airline", "origin", "dest", "day_of_week"] if c in df.columns]
     num_cols = [c for c in ["dep_delay", "distance", "month", "year"] if c in df.columns]
 
-    # index categoricals
-    for c in cat_cols:
-        idx = StringIndexer(inputCol=c, outputCol=f"{c}_idx", handleInvalid="keep")
-        df = idx.fit(df).transform(df)
+    stages = []
 
-    # one-hot for linear models; indexed for tree models
-    if args.algo in ["lr", "linreg"]:
-        enc = OneHotEncoder(
-            inputCols=[f"{c}_idx" for c in cat_cols],
-            outputCols=[f"{c}_oh" for c in cat_cols],
-            handleInvalid="keep",
+    # StringIndexers for categoricals
+    for c in cat_cols:
+        stages.append(
+            StringIndexer(inputCol=c, outputCol=f"{c}_idx", handleInvalid="keep")
         )
-        df = enc.fit(df).transform(df)
-        feat_cols = [f"{c}_oh" for c in cat_cols] + num_cols
+
+    # One-hot for linear models; indexed for tree models
+    if args.algo in ["lr", "linreg"]:
+        input_idx_cols = [f"{c}_idx" for c in cat_cols]
+        oh_cols = [f"{c}_oh" for c in cat_cols]
+        stages.append(
+            OneHotEncoder(
+                inputCols=input_idx_cols,
+                outputCols=oh_cols,
+                handleInvalid="keep",
+            )
+        )
+        feat_cols = oh_cols + num_cols
     else:
         feat_cols = [f"{c}_idx" for c in cat_cols] + num_cols
 
-    df = df.dropna(subset=[label_col])
     assembler = VectorAssembler(inputCols=feat_cols, outputCol="features")
-    data = assembler.transform(df).select("features", label_col)
+    stages.append(assembler)
 
-    train, test = data.randomSplit([0.7, 0.3], seed=42)
-
-    # 5) Train & evaluate
-    metrics_text = ""
-    pred = None
-    model = None
-
+    # Choose estimator
     if args.task == "classify":
         if args.algo == "lr":
-            model = LogisticRegression(labelCol=label_col, featuresCol="features", maxIter=50).fit(train)
+            estimator = LogisticRegression(
+                labelCol=label_col, featuresCol="features", maxIter=50
+            )
         else:  # rf
-            model = RandomForestClassifier(
-                labelCol=label_col, featuresCol="features", numTrees=80, maxBins=args.tree_max_bins
-            ).fit(train)
-
-        pred = model.transform(test)
-        auc = BinaryClassificationEvaluator(labelCol=label_col, metricName="areaUnderROC").evaluate(pred)
-        metrics_text = f"TASK=classify, ALGO={args.algo}, THRESH={args.label_threshold}, ROC-AUC={auc:.4f}\n"
-        print("[METRIC]", metrics_text.strip())
-
+            estimator = RandomForestClassifier(
+                labelCol=label_col,
+                featuresCol="features",
+                numTrees=80,
+                maxBins=args.tree_max_bins,
+            )
     else:  # regress
         if args.algo == "linreg":
-            model = LinearRegression(labelCol=label_col, featuresCol="features", maxIter=50).fit(train)
+            estimator = LinearRegression(
+                labelCol=label_col, featuresCol="features", maxIter=50
+            )
         else:  # rfreg
-            model = RandomForestRegressor(
-                labelCol=label_col, featuresCol="features", numTrees=120, maxBins=args.tree_max_bins
-            ).fit(train)
+            estimator = RandomForestRegressor(
+                labelCol=label_col,
+                featuresCol="features",
+                numTrees=120,
+                maxBins=args.tree_max_bins,
+            )
 
-        pred = model.transform(test)
-        rmse = RegressionEvaluator(labelCol=label_col, metricName="rmse").evaluate(pred)
-        r2 = RegressionEvaluator(labelCol=label_col, metricName="r2").evaluate(pred)
-        metrics_text = f"TASK=regress, ALGO={args.algo}, RMSE={rmse:.4f}, R2={r2:.4f}\n"
+    stages.append(estimator)
+
+    pipeline = Pipeline(stages=stages)
+
+    # Drop rows with missing label
+    df = df.dropna(subset=[label_col])
+
+    train, test = df.randomSplit([0.7, 0.3], seed=42)
+
+    # 5) Train pipeline & evaluate
+    pipeline_model = pipeline.fit(train)
+    pred = pipeline_model.transform(test)
+
+    # Final model is the last stage in the pipeline
+    model = pipeline_model.stages[-1]
+
+    metrics_text = ""
+    auc = None
+    rmse = None
+    r2 = None
+
+    if args.task == "classify":
+        auc = BinaryClassificationEvaluator(
+            labelCol=label_col, metricName="areaUnderROC"
+        ).evaluate(pred)
+        metrics_text = (
+            f"TASK=classify, ALGO={args.algo}, "
+            f"THRESH={args.label_threshold}, ROC-AUC={auc:.4f}\n"
+        )
+        print("[METRIC]", metrics_text.strip())
+    else:
+        rmse = RegressionEvaluator(
+            labelCol=label_col, metricName="rmse"
+        ).evaluate(pred)
+        r2 = RegressionEvaluator(
+            labelCol=label_col, metricName="r2"
+        ).evaluate(pred)
+        metrics_text = (
+            f"TASK=regress, ALGO={args.algo}, RMSE={rmse:.4f}, R2={r2:.4f}\n"
+        )
         print("[METRIC]", metrics_text.strip())
 
-    # 6) Save Spark model + metrics + predictions sample
+    # 6) Save Spark PipelineModel + metrics + predictions sample
     model_dirname = f"flight_delay_{'classify' if args.task == 'classify' else 'regress'}_{args.algo}"
     model_path = os.path.join(args.models_dir, model_dirname)
     try:
         shutil.rmtree(model_path)
     except Exception:
         pass
-    model.save(model_path)
+
+    # Save full PipelineModel so we can use it in streaming
+    pipeline_model.save(model_path)
 
     with open(os.path.join(args.models_dir, "metrics.txt"), "a") as f:
         f.write(metrics_text)
@@ -281,7 +325,11 @@ def main():
         except Exception as e:
             log.warning(f"Skipping confusion matrix export: {e}")
 
-        report["metrics"] = {"roc_auc": float(auc)}
+        report["metrics"] = {}
+        try:
+            report["metrics"]["roc_auc"] = float(auc)
+        except Exception:
+            pass
 
         # importances / coefficients
         try:
@@ -344,7 +392,7 @@ def main():
         log.warning(f"Skipping model_card.json: {e}")
 
     spark.stop()
-    print(f"[OK] Model saved to {model_path}")
+    print(f"[OK] PipelineModel saved to {model_path}")
     print(f"[OK] Metrics appended to outputs/models/metrics.txt")
     print(f"[OK] Predictions sample (optional): {args.predictions_csv}")
 

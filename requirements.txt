@@ -3,3 +3,4 @@ python-dotenv
 pandas
 matplotlib
 kaggle         # only if you’ll download from Kaggle via CLI
+pyarrow

@@ -40,6 +40,13 @@ def main():
     df = df.withColumn("flight_date", F.to_date("flight_date"))
     df = df.filter(F.col("flight_date").isNotNull())
 
+    if "year" not in df.columns:
+        df = df.withColumn("year", F.year("flight_date"))
+    if "month" not in df.columns:
+        df = df.withColumn("month", F.month("flight_date"))
+    if "day_of_week" not in df.columns:
+        df = df.withColumn("day_of_week", F.date_format("flight_date", "E"))
+
     # find the most recent date and back off N months
     max_date = df.agg(F.max("flight_date").alias("maxd")).collect()[0]["maxd"]
     if not max_date:
@@ -49,8 +56,15 @@ def main():
     start_cut = F.add_months(F.lit(max_date), -args.months + 1)  # inclusive current month and N-1 back
     df_recent = df.filter(F.trunc("flight_date","month") >= F.trunc(start_cut, "month"))
 
-    # (Optional) keep only columns streaming demo needs; add more if you like
-    keep_cols = [c for c in ["flight_date","airline","origin","dest","arr_delay"] if c in df_recent.columns]
+    # keep all columns needed by the model
+    keep_cols = [
+        c for c in [
+            "flight_date", "airline", "origin", "dest",
+            "arr_delay", "dep_delay", "distance",
+            "month", "year", "day_of_week"
+        ]
+        if c in df_recent.columns
+    ]
     df_recent = df_recent.select(*keep_cols)
 
     # assign batch ids by flight_date order, fixed rows per file
