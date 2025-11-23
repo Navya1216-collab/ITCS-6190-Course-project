@@ -58,7 +58,6 @@ ITCS-6190-Course-Project/
 │   ├── plots/                       # Visualizations (PNG)
 │   ├── models/                      # Saved models + metrics
 │   ├── stream_out/                  # Streaming demo outputs
-│   └── predictions/                 # Live predictions from stream
 ├── src/
 │   ├── 01_ingest_eda.py
 │   ├── 02_extended_eda.py
