@@ -8,7 +8,7 @@
 | Poojitha Jayareddygari | 801426875  |
 | Sahit Ceeka            | 801424751  |
 | Sai Kiran Jagini       | 801484665  |
-| Jeevith Gowda          | 801455831  |
+| Jeevith Doddalingegowda Rama          | 801455831  |
 
 ---
 
