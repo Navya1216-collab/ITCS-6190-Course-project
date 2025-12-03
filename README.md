@@ -395,6 +395,21 @@ python src/viz_stream_live.py
 ```
 
 ---
+# Final Deliverables
+
+- 📄 Final Report: `Documentation/Cloud Course Project Dcoumentation.pdf`
+- 📊 Final Slides: `Documentation/Group 5 - Flight Delay & Cancellation Analysis.pdf`
+- 🎥 Technical Video (~20 min): `Documentation/Cloud Course Project Recording.mov`
+
+# Limitations & Future Work
+
+- Our models focus on a subset of years/routes and may not generalize to all airports or future disruptions.
+- Weather and ATC constraints are not modeled explicitly; they are only indirectly captured via delays.
+
+**Future Work**
+- Incorporate richer weather and congestion features.
+- Explore gradient-boosted trees / XGBoost and hyperparameter tuning at scale.
+- Deploy the streaming prediction job to a managed Spark cluster (e.g., EMR / Dataproc) instead of local mode.
 
 # **Conclusion**
 
